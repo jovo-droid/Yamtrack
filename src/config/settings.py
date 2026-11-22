@@ -472,6 +472,9 @@ GOOGLE_BOOKS_API_KEY = config(
 # Optional two-letter language code to restrict Google Books searches (e.g. "de")
 GOOGLE_BOOKS_LANGUAGE = config("GOOGLE_BOOKS_LANGUAGE", default="")
 
+# Source used for book searches by default: hardcover, openlibrary or googlebooks
+BOOK_DEFAULT_SOURCE = config("BOOK_DEFAULT_SOURCE", default="hardcover").strip()
+
 COMICVINE_API = config(
     "COMICVINE_API",
     default=secret(

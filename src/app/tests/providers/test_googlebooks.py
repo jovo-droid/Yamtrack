@@ -3,8 +3,10 @@ from unittest.mock import MagicMock, patch
 import requests
 from django.conf import settings
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.test import TestCase, override_settings
 
+from app import config
 from app.models import MediaTypes, Sources
 from app.providers import googlebooks, services
 
@@ -155,3 +157,18 @@ class GoogleBooksTests(TestCase):
             Sources.GOOGLEBOOKS.value,
         )
         mock_book.assert_called_once_with("abc")
+
+
+class BookDefaultSourceTests(TestCase):
+    """Tests for the BOOK_DEFAULT_SOURCE setting."""
+
+    @override_settings(BOOK_DEFAULT_SOURCE="googlebooks")
+    def test_default_source_from_setting(self):
+        """The configured source is used as default for book searches."""
+        self.assertEqual(config.get_book_default_source(), Sources.GOOGLEBOOKS)
+
+    @override_settings(BOOK_DEFAULT_SOURCE="tmdb")
+    def test_invalid_default_source(self):
+        """Sources that can't search books are rejected."""
+        with self.assertRaises(ImproperlyConfigured):
+            config.get_book_default_source()
