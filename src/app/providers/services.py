@@ -15,6 +15,7 @@ from app.providers import (
     anilist,
     bgg,
     comicvine,
+    googlebooks,
     hardcover,
     igdb,
     mal,
@@ -75,6 +76,10 @@ session.mount(
 session.mount(
     "https://api.hardcover.app/v1/graphql",
     LimiterAdapter(per_minute=50),
+)
+session.mount(
+    "https://www.googleapis.com/books/v1",
+    LimiterAdapter(per_minute=60),
 )
 session.mount(
     "https://boardgamegeek.com/xmlapi2",
@@ -262,11 +267,10 @@ def get_media_metadata(
         ),
         MediaTypes.MOVIE.value: lambda: tmdb.movie(media_id),
         MediaTypes.GAME.value: lambda: igdb.game(media_id),
-        MediaTypes.BOOK.value: lambda: (
-            hardcover.book(media_id)
-            if source == Sources.HARDCOVER.value
-            else openlibrary.book(media_id)
-        ),
+        MediaTypes.BOOK.value: lambda: {
+            Sources.HARDCOVER.value: hardcover.book,
+            Sources.GOOGLEBOOKS.value: googlebooks.book,
+        }.get(source, openlibrary.book)(media_id),
         MediaTypes.COMIC.value: lambda: comicvine.comic(media_id),
         MediaTypes.BOARDGAME.value: lambda: bgg.boardgame(media_id),
     }
@@ -309,11 +313,10 @@ def search(media_type, query, page, source=None, *, show_adult_titles=True):
         MediaTypes.GAME.value: lambda: igdb.search(
             query, page, show_adult_titles=show_adult_titles
         ),
-        MediaTypes.BOOK.value: lambda: (
-            openlibrary.search(query, page)
-            if source == Sources.OPENLIBRARY.value
-            else hardcover.search(query, page)
-        ),
+        MediaTypes.BOOK.value: lambda: {
+            Sources.OPENLIBRARY.value: openlibrary.search,
+            Sources.GOOGLEBOOKS.value: googlebooks.search,
+        }.get(source, hardcover.search)(query, page),
         MediaTypes.COMIC.value: lambda: comicvine.search(query, page),
         MediaTypes.BOARDGAME.value: lambda: bgg.search(query, page),
     }

@@ -463,6 +463,15 @@ if not HARDCOVER_API.startswith("Bearer "):
     msg = "HARDCOVER_API must start with 'Bearer '."
     raise ImproperlyConfigured(msg)
 
+# Google Books - works without a key, but an own key raises the daily quota
+# https://developers.google.com/books/docs/v1/using#APIKey
+GOOGLE_BOOKS_API_KEY = config(
+    "GOOGLE_BOOKS_API_KEY",
+    default=secret("GOOGLE_BOOKS_API_KEY_FILE", ""),
+).strip()
+# Optional two-letter language code to restrict Google Books searches (e.g. "de")
+GOOGLE_BOOKS_LANGUAGE = config("GOOGLE_BOOKS_LANGUAGE", default="")
+
 COMICVINE_API = config(
     "COMICVINE_API",
     default=secret(

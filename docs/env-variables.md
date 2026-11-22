@@ -17,6 +17,8 @@ This page outlines the environment variables used in the YamTrack project.
 | `IGDB_SECRET`   | IGDB API secret for games. A default value is provided, but it's recommended to get your own as it has a low rate limit.                                                                                                                              |
 | `IGDB_NSFW`     | Default to `False`. Set to `True` to include adult content in game searches.                                                                                                                                                                          |
 | `HARDCOVER_API` | Hardcover API key for books. A default key is provided, but it's recommended to get your own as it has a low rate limit. Custom values must include the `Bearer ` prefix.                                                                              |
+| `GOOGLE_BOOKS_API_KEY` | Optional Google Books API key for books. Google Books works without a key, but an own key raises the daily quota.                                                                                                                               |
+| `GOOGLE_BOOKS_LANGUAGE` | Optional two-letter language code (e.g. `de`) to restrict Google Books searches to one language.                                                                                                                                               |
 | `COMICVINE_API` | ComicVine API key for comics. A default key is provided, but it's recommended to get your own as it has a low rate limit.                                                                                                                             |
 
 !!! warning "AniList"
@@ -132,6 +134,7 @@ YamTrack supports reading sensitive configuration values from Docker secrets fil
 | `IGDB_ID`                 | `IGDB_ID_FILE`                 |
 | `IGDB_SECRET`             | `IGDB_SECRET_FILE`             |
 | `HARDCOVER_API`           | `HARDCOVER_API_FILE`           |
+| `GOOGLE_BOOKS_API_KEY`    | `GOOGLE_BOOKS_API_KEY_FILE`    |
 | `COMICVINE_API`           | `COMICVINE_API_FILE`           |
 | `TRAKT_API`               | `TRAKT_API_FILE`               |
 | `SIMKL_ID`                | `SIMKL_ID_FILE`                |
