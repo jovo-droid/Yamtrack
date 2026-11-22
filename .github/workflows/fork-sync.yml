@@ -1,0 +1,80 @@
+# Fork only: keeps this fork's dev branch on top of upstream FuzzyGrim/Yamtrack.
+#
+# Every week the commits of this fork (e.g. the Google Books source) are
+# rebased onto upstream/dev. If that works, dev is force-pushed and the
+# Docker image is rebuilt by docker-image.yml. If the rebase has conflicts,
+# nothing is pushed and this workflow fails, so GitHub sends a notification.
+#
+# Recommended: add a fine-grained token as repository secret SYNC_TOKEN
+# (this repository only, permissions "Contents: read and write" and
+# "Workflows: read and write"). Without it, pushes fail whenever upstream
+# changed a workflow file, because GITHUB_TOKEN may not change workflows.
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 4 * * 1" # Mondays 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: fork-sync
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: https://github.com/FuzzyGrim/Yamtrack.git
+  BRANCH: dev
+
+jobs:
+  sync:
+    if: github.repository != 'FuzzyGrim/Yamtrack'
+    runs-on: ubuntu-latest
+    env:
+      HAS_SYNC_TOKEN: ${{ secrets.SYNC_TOKEN != '' }}
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+
+      - name: Rebase onto upstream
+        id: rebase
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "$UPSTREAM"
+          git fetch upstream "$BRANCH"
+
+          if git merge-base --is-ancestor "upstream/$BRANCH" HEAD; then
+            echo "Already up to date with upstream."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Fork commits that will be rebased:"
+          git log --oneline "upstream/$BRANCH..HEAD"
+
+          if ! git rebase "upstream/$BRANCH"; then
+            echo "::error::Rebase onto upstream/$BRANCH has conflicts in:"
+            git diff --name-only --diff-filter=U | sed 's/^/::error::  /'
+            git rebase --abort
+            exit 1
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push rebased branch
+        if: steps.rebase.outputs.changed == 'true'
+        run: git push --force-with-lease origin "HEAD:$BRANCH"
+
+      # A push made with GITHUB_TOKEN does not start other workflows,
+      # so start the image build by hand in that case.
+      - name: Start image build
+        if: steps.rebase.outputs.changed == 'true' && env.HAS_SYNC_TOKEN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run docker-image.yml --ref "$BRANCH"
