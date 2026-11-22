@@ -42,10 +42,13 @@ class GoogleBooksTests(TestCase):
         """Clear the cache before each test."""
         cache.clear()
 
-    @patch("app.providers.googlebooks.services.api_request")
+    @patch("app.providers.googlebooks.services.session.get")
     def test_search(self, mock_api_request):
         """Search results are mapped to Yamtrack's format."""
-        mock_api_request.return_value = {"totalItems": 1, "items": [VOLUME]}
+        mock_api_request.return_value.json.return_value = {
+            "totalItems": 1,
+            "items": [VOLUME],
+        }
 
         response = googlebooks.search("Meeressarg", 2)
 
@@ -66,10 +69,10 @@ class GoogleBooksTests(TestCase):
         )
 
     @override_settings(GOOGLE_BOOKS_API_KEY="secret", GOOGLE_BOOKS_LANGUAGE="de")
-    @patch("app.providers.googlebooks.services.api_request")
+    @patch("app.providers.googlebooks.services.session.get")
     def test_search_key_and_language(self, mock_api_request):
         """API key and language restriction are sent when configured."""
-        mock_api_request.return_value = {"totalItems": 0}
+        mock_api_request.return_value.json.return_value = {"totalItems": 0}
 
         response = googlebooks.search("Meeressarg", 1)
 
@@ -78,10 +81,10 @@ class GoogleBooksTests(TestCase):
         self.assertEqual(params["langRestrict"], "de")
         self.assertEqual(response["results"], [])
 
-    @patch("app.providers.googlebooks.services.api_request")
+    @patch("app.providers.googlebooks.services.session.get")
     def test_book(self, mock_api_request):
         """Book metadata is mapped to Yamtrack's format."""
-        mock_api_request.return_value = VOLUME
+        mock_api_request.return_value.json.return_value = VOLUME
 
         response = googlebooks.book("abc123XYZ")
 
@@ -98,10 +101,13 @@ class GoogleBooksTests(TestCase):
         )
         self.assertTrue(response["source_url"].startswith("https://books.google"))
 
-    @patch("app.providers.googlebooks.services.api_request")
+    @patch("app.providers.googlebooks.services.session.get")
     def test_book_minimal(self, mock_api_request):
         """Missing optional fields fall back to defaults."""
-        mock_api_request.return_value = {"id": "min", "volumeInfo": {"title": "X"}}
+        mock_api_request.return_value.json.return_value = {
+            "id": "min",
+            "volumeInfo": {"title": "X"},
+        }
 
         response = googlebooks.book("min")
 
@@ -111,7 +117,7 @@ class GoogleBooksTests(TestCase):
         self.assertIsNone(response["score"])
         self.assertIsNone(response["details"]["isbn"])
 
-    @patch("app.providers.googlebooks.services.api_request")
+    @patch("app.providers.googlebooks.services.session.get")
     def test_book_not_found(self, mock_api_request):
         """Unknown volume ids raise a 404 provider error."""
         error_response = MagicMock(status_code=requests.codes.not_found)
@@ -122,6 +128,22 @@ class GoogleBooksTests(TestCase):
         with self.assertRaises(services.ProviderAPIError) as context:
             googlebooks.book("missing")
         self.assertEqual(context.exception.status_code, requests.codes.not_found)
+
+    @patch("app.providers.googlebooks.services.session.get")
+    def test_search_rate_limited_is_not_retried(self, mock_api_request):
+        """A 429 from Google Books fails at once instead of blocking."""
+        error_response = MagicMock(status_code=requests.codes.too_many_requests)
+        mock_api_request.return_value.raise_for_status.side_effect = (
+            requests.exceptions.HTTPError(response=error_response)
+        )
+
+        with self.assertRaises(services.ProviderAPIError) as context:
+            googlebooks.search("Meeressarg", 1)
+        self.assertEqual(
+            context.exception.status_code,
+            requests.codes.too_many_requests,
+        )
+        self.assertEqual(mock_api_request.call_count, 1)
 
     @patch("app.providers.googlebooks.book")
     def test_services_routes_to_googlebooks(self, mock_book):

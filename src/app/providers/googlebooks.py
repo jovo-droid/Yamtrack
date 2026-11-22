@@ -22,11 +22,33 @@ def handle_error(error):
     details = None
     response = getattr(error, "response", None)
     if response is not None:
-        try:
-            details = response.json().get("error", {}).get("message")
-        except (requests.exceptions.JSONDecodeError, AttributeError):
-            details = None
+        if response.status_code == requests.codes.too_many_requests:
+            details = (
+                "Google Books quota exceeded. Set GOOGLE_BOOKS_API_KEY to use "
+                "your own quota"
+            )
+        else:
+            try:
+                details = response.json().get("error", {}).get("message")
+            except (requests.exceptions.JSONDecodeError, AttributeError):
+                details = None
     raise services.ProviderAPIError(Sources.GOOGLEBOOKS.value, error, details)
+
+
+def api_get(url, params=None):
+    """Make a GET request to Google Books and return the JSON response.
+
+    Unlike services.api_request, rate limits (HTTP 429) are not retried:
+    without an API key Google Books often answers 429 for the whole day,
+    and retrying would block the web worker until the request times out.
+    """
+    response = services.session.get(
+        url,
+        params=api_params(params),
+        timeout=settings.REQUEST_TIMEOUT,
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 def api_params(params=None):
@@ -56,13 +78,8 @@ def search(query, page):
             params["langRestrict"] = settings.GOOGLE_BOOKS_LANGUAGE
 
         try:
-            response = services.api_request(
-                Sources.GOOGLEBOOKS.value,
-                "GET",
-                base_url,
-                params=api_params(params),
-            )
-        except requests.exceptions.HTTPError as error:
+            response = api_get(base_url, params)
+        except requests.exceptions.RequestException as error:
             handle_error(error)
 
         results = [
@@ -95,14 +112,10 @@ def book(media_id):
 
     if data is None:
         try:
-            response = services.api_request(
-                Sources.GOOGLEBOOKS.value,
-                "GET",
-                f"{base_url}/{media_id}",
-                params=api_params(),
-            )
-        except requests.exceptions.HTTPError as error:
-            if error.response is not None and error.response.status_code in (
+            response = api_get(f"{base_url}/{media_id}")
+        except requests.exceptions.RequestException as error:
+            error_response = getattr(error, "response", None)
+            if error_response is not None and error_response.status_code in (
                 requests.codes.not_found,
                 requests.codes.service_unavailable,  # returned for unknown ids
             ):
