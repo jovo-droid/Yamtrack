@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.utils.translation import pgettext_lazy
@@ -76,6 +78,20 @@ COLORS = {
 
 # --- Central Configuration Dictionary ---
 # "activity" (watch, read or play) picks the history phrases for a media type.
+
+BOOK_SOURCES = [Sources.HARDCOVER, Sources.OPENLIBRARY, Sources.GOOGLEBOOKS]
+
+
+def get_book_default_source():
+    """Return the book source set with BOOK_DEFAULT_SOURCE."""
+    for source in BOOK_SOURCES:
+        if source.value == settings.BOOK_DEFAULT_SOURCE.lower():
+            return source
+    allowed = ", ".join(source.value for source in BOOK_SOURCES)
+    msg = f"BOOK_DEFAULT_SOURCE must be one of: {allowed}."
+    raise ImproperlyConfigured(msg)
+
+
 MEDIA_TYPE_CONFIG = {
     MediaTypes.TV.value: {
         "sources": [Sources.TMDB],
@@ -229,8 +245,8 @@ MEDIA_TYPE_CONFIG = {
         "date_key": "release_date",
     },
     MediaTypes.BOOK.value: {
-        "sources": [Sources.HARDCOVER, Sources.OPENLIBRARY, Sources.GOOGLEBOOKS],
-        "default_source": Sources.HARDCOVER,
+        "sources": BOOK_SOURCES,
+        "default_source": get_book_default_source(),
         "sample_query": "The Great Gatsby",
         "unicode_icon": "📖",
         "verb": {

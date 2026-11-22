@@ -19,6 +19,7 @@ This page outlines the environment variables used in the YamTrack project.
 | `HARDCOVER_API` | Hardcover API key for books. A default key is provided, but it's recommended to get your own as it has a low rate limit. Custom values must include the `Bearer ` prefix.                                                                              |
 | `GOOGLE_BOOKS_API_KEY` | Optional Google Books API key for books. Google Books works without a key, but an own key raises the daily quota.                                                                                                                               |
 | `GOOGLE_BOOKS_LANGUAGE` | Optional two-letter language code (e.g. `de`) to restrict Google Books searches to one language.                                                                                                                                               |
+| `BOOK_DEFAULT_SOURCE` | Default source for book searches: `hardcover` (default), `openlibrary` or `googlebooks`.                                                                                                                                                         |
 | `COMICVINE_API` | ComicVine API key for comics. A default key is provided, but it's recommended to get your own as it has a low rate limit.                                                                                                                             |
 
 !!! warning "AniList"
