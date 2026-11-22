@@ -177,8 +177,8 @@ def get_genres(info):
     """Return unique genres from Google Books categories like 'Fiction / Thrillers'."""
     genres = []
     for category in info.get("categories", []):
-        for part in category.split(" / "):
-            part = part.strip()
+        for raw_part in category.split(" / "):
+            part = raw_part.strip()
             if part and part not in genres and part.lower() != "general":
                 genres.append(part)
     return genres or None
