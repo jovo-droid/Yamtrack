@@ -47,6 +47,7 @@ class Sources(models.TextChoices):
     IGDB = "igdb", "Internet Game Database"
     OPENLIBRARY = "openlibrary", "Open Library"
     HARDCOVER = "hardcover", "Hardcover"
+    GOOGLEBOOKS = "googlebooks", "Google Books"
     COMICVINE = "comicvine", "Comic Vine"
     BGG = "bgg", "BoardGameGeek"
     MANUAL = "manual", _("Manual")
